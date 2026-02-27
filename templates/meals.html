@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Meals - WeightTracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9 order-last order-lg-first">
+        <h4>Meals</h4>
+        <form class="mb-3 d-flex gap-2" method="GET">
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search meals..." value="{{ query }}" style="max-width:300px">
+            <button type="submit" class="btn btn-outline-success btn-sm">Search</button>
+            {% if query %}<a href="{{ url_for('meals_page') }}" class="btn btn-outline-secondary btn-sm">Clear</a>{% endif %}
+        </form>
+        <table class="table table-sm table-hover sortable-table" id="mealsTable">
+            <thead class="table-success">
+                <tr>
+                    <th class="sortable" data-col="0" data-type="text">Name <span class="sort-arrow"></span></th>
+                    <th class="sortable text-end" data-col="1" data-type="num">kJ <span class="sort-arrow"></span></th>
+                    <th class="sortable text-end" data-col="2" data-type="num">Cal <span class="sort-arrow"></span></th>
+                    <th class="sortable text-end" data-col="3" data-type="num">Protein (g) <span class="sort-arrow"></span></th>
+                    <th class="sortable text-end" data-col="4" data-type="num">Cal:Protein <span class="sort-arrow"></span></th>
+                    <th class="sortable text-end" data-col="5" data-type="num">Uses <span class="sort-arrow"></span></th>
+                    <th class="text-center">Source</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in meals %}
+                <tr>
+                    <td><a href="{{ url_for('edit_meal', meal_id=m.id) }}">{{ m.name }}</a></td>
+                    <td class="text-end">{{ m.total_kj|round(0)|int }}</td>
+                    <td class="text-end">{{ m.total_calories|round(0)|int }}</td>
+                    <td class="text-end">{{ m.total_protein|round(1) }}</td>
+                    <td class="text-end">
+                        {% if m.total_protein > 0 %}
+                            {{ (m.total_calories / m.total_protein)|round(1) }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if m.use_count > 0 %}
+                            <a href="#" class="usage-link" data-url="/api/meal/{{ m.id }}/usage" data-type="days">{{ m.use_count }}</a>
+                        {% else %}
+                            0
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if m.components %}
+                            <span class="badge bg-info">{{ m.components|length }} items</span>
+                        {% else %}
+                            <span class="badge bg-secondary">manual</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <form method="POST" action="{{ url_for('delete_meal', meal_id=m.id) }}" class="d-inline"
+                              onsubmit="return confirm('Delete {{ m.name }}?')">
+                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1">&times;</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="text-muted small">{{ meals|length }} meal(s). Lower Cal:Protein = more protein-dense.</p>
+    </div>
+
+    <div class="col-lg-3 order-first order-lg-last mb-3 mb-lg-0">
+        <div class="card">
+            <div class="card-header card-header-green">Create New Meal</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_meal') }}">
+                    <div class="mb-2">
+                        <label class="form-label mb-0 small">Meal Name</label>
+                        <input type="text" name="name" class="form-control form-control-sm" required>
+                    </div>
+                    <p class="small text-muted">You can add components after creating, or enter override values for quick entry:</p>
+                    <div class="row g-2 mb-2">
+                        <div class="col">
+                            <label class="form-label mb-0 small">kJ (override)</label>
+                            <input type="number" step="0.1" name="kj_override" class="form-control form-control-sm">
+                        </div>
+                        <div class="col">
+                            <label class="form-label mb-0 small">Cal (override)</label>
+                            <input type="number" step="0.1" name="calories_override" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label mb-0 small">Protein (override)</label>
+                        <input type="number" step="0.1" name="protein_override" class="form-control form-control-sm">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm w-100">Create Meal</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'usage_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/sort.js') }}"></script>
+<script src="{{ url_for('static', filename='js/usage.js') }}"></script>
+{% endblock %}

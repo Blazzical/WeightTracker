@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Edit: {{ meal.name }} - WeightTracker{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('meals_page') }}" class="btn btn-outline-secondary btn-sm">&larr; Back</a>
+    <h4 class="mb-0">Edit Meal: {{ meal.name }}</h4>
+</div>
+
+<form method="POST" action="{{ url_for('save_meal', meal_id=meal.id) }}">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Meal info -->
+            <div class="card mb-3">
+                <div class="card-header card-header-green">Meal Details</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="form-label mb-0 small">Meal Name</label>
+                        <input type="text" name="name" class="form-control form-control-sm" value="{{ meal.name }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label mb-0 small">Notes</label>
+                        <input type="text" name="notes" class="form-control form-control-sm" value="{{ meal.notes or '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Components -->
+            <div class="card mb-3">
+                <div class="card-header card-header-green d-flex justify-content-between align-items-center">
+                    <span>Components</span>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="addComponentRow()">+ Add</button>
+                </div>
+                <div class="card-body" id="componentsContainer">
+                    {% if meal.components %}
+                        {% for mc in meal.components %}
+                        <div class="row g-2 mb-2 comp-row align-items-end">
+                            <div class="col">
+                                <label class="form-label mb-0 small">Component</label>
+                                <input type="text" class="form-control form-control-sm select-filter mb-1" placeholder="Filter...">
+                                <select name="comp_id" class="form-select form-select-sm">
+                                    <option value="">-- Select --</option>
+                                    {% for c in components %}
+                                    <option value="{{ c.id }}" {% if c.id == mc.component_id %}selected{% endif %}>
+                                        {{ c.name }} ({{ c.calories|round(0)|int }} cal, {{ c.protein_g }}g)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label mb-0 small">Qty</label>
+                                <input type="number" step="0.5" min="0.5" name="comp_qty" value="{{ mc.quantity }}" class="form-control form-control-sm" style="width:80px">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.comp-row').remove()">&times;</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small" id="noCompsMsg">No components added. Use override values below or add components.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Override values -->
+            <div class="card mb-3">
+                <div class="card-header card-header-light">Override Values <small class="text-muted">(used when no components are set)</small></div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col">
+                            <label class="form-label mb-0 small">kJ</label>
+                            <input type="number" step="0.1" name="kj_override" class="form-control form-control-sm" value="{{ meal.kj_override or '' }}">
+                        </div>
+                        <div class="col">
+                            <label class="form-label mb-0 small">Calories</label>
+                            <input type="number" step="0.1" name="calories_override" class="form-control form-control-sm" value="{{ meal.calories_override or '' }}">
+                        </div>
+                        <div class="col">
+                            <label class="form-label mb-0 small">Protein (g)</label>
+                            <input type="number" step="0.1" name="protein_override" class="form-control form-control-sm" value="{{ meal.protein_override or '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header card-header-green">Calculated Totals</div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr><td>kJ</td><td class="text-end"><strong>{{ meal.total_kj|round(0)|int }}</strong></td></tr>
+                        <tr><td>Calories</td><td class="text-end"><strong>{{ meal.total_calories|round(0)|int }}</strong></td></tr>
+                        <tr><td>Protein</td><td class="text-end"><strong>{{ meal.total_protein|round(1) }}g</strong></td></tr>
+                    </table>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Save Meal</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addComponentRow() {
+    const msg = document.getElementById('noCompsMsg');
+    if (msg) msg.remove();
+
+    const container = document.getElementById('componentsContainer');
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-2 comp-row align-items-end';
+    row.innerHTML = `
+        <div class="col">
+            <label class="form-label mb-0 small">Component</label>
+            <input type="text" class="form-control form-control-sm select-filter mb-1" placeholder="Filter...">
+            <select name="comp_id" class="form-select form-select-sm">
+                <option value="">-- Select --</option>
+                {% for c in components %}
+                <option value="{{ c.id }}">{{ c.name }} ({{ c.calories|round(0)|int }} cal, {{ c.protein_g }}g)</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-0 small">Qty</label>
+            <input type="number" step="0.5" min="0.5" name="comp_qty" value="1" class="form-control form-control-sm" style="width:80px">
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.comp-row').remove()">&times;</button>
+        </div>
+    `;
+    container.appendChild(row);
+    initAllFilterableSelects(row);
+}
+</script>
+<script src="{{ url_for('static', filename='js/filter-select.js') }}"></script>
+{% endblock %}

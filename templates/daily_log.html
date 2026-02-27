@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}{{ log_date }} - WeightTracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Left: Day info + entries -->
+    <div class="col-lg-8">
+        <!-- Date nav -->
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <a href="{{ url_for('daily_log', log_date=prev_date) }}" class="btn btn-outline-secondary btn-sm">&larr; Prev</a>
+            <h4 class="mb-0">
+                {{ dt.strftime('%A, %d %B %Y') }}
+                {% if log_date == today %}<span class="badge bg-success ms-2">Today</span>{% endif %}
+            </h4>
+            <a href="{{ url_for('daily_log', log_date=next_date) }}" class="btn btn-outline-secondary btn-sm">Next &rarr;</a>
+        </div>
+
+        <!-- Weight & Exercise -->
+        <div class="card mb-3">
+            <div class="card-header card-header-green">Weight & Exercise</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_daily_log', log_date=log_date) }}" class="row g-2 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label mb-0 small">Morning (kg)</label>
+                        <input type="number" step="0.1" name="weight_morning" class="form-control form-control-sm" style="width:100px" value="{{ log.weight_morning or '' }}">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label mb-0 small">Night (kg)</label>
+                        <input type="number" step="0.1" name="weight_night" class="form-control form-control-sm" style="width:100px" value="{{ log.weight_night or '' }}">
+                    </div>
+                    <div class="col">
+                        <label class="form-label mb-0 small">Exercise</label>
+                        <input type="text" name="exercise" class="form-control form-control-sm" value="{{ log.exercise or '' }}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-success btn-sm">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Entries by meal time -->
+        {% for time_label, time_name in [('breakfast','Breakfast'),('lunch','Lunch'),('dinner','Dinner'),('snack','Snack'),('coffee','Coffee'),('other','Other')] %}
+        <div class="card mb-2">
+            <div class="card-header card-header-light d-flex justify-content-between align-items-center py-1">
+                <span class="d-flex align-items-center gap-2">
+                    <strong>{{ time_name }}</strong>
+                    {% set qa_items = quick_adds_by_time.get(time_label, []) %}
+                    {% if qa_items %}
+                    <span class="d-flex align-items-center gap-1">
+                        {% for qa in qa_items %}
+                        <form method="POST" action="{{ url_for('quick_add_entry', log_date=log_date, qa_id=qa.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-outline-success btn-sm py-0 px-1" title="Add {{ qa.label }} ({{ qa.quantity }}x)">+ {{ qa.label }}</button>
+                        </form>
+                        {% endfor %}
+                    </span>
+                    {% endif %}
+                </span>
+                {% set time_entries = grouped.get(time_label, []) %}
+                {% if time_entries %}
+                    {% set time_kj = time_entries | map(attribute='entry_kj') | sum %}
+                    {% set time_cal = time_entries | map(attribute='entry_cal') | sum %}
+                    {% set time_prot = time_entries | map(attribute='entry_protein') | sum %}
+                    <span class="text-muted small">{{ time_kj|round(0)|int }} kJ / {{ time_cal|round(0)|int }} cal / {{ time_prot|round(1) }}g protein</span>
+                {% endif %}
+            </div>
+            {% if time_entries %}
+            <ul class="list-group list-group-flush">
+                {% for e in time_entries %}
+                <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                    <span>
+                        {% if e.quantity != 1 %}<span class="badge bg-secondary">x{{ e.quantity }}</span>{% endif %}
+                        {% if e.meal_id %}
+                            <a href="{{ url_for('edit_meal', meal_id=e.meal_id) }}">{{ e.name }}</a>
+                        {% elif e.component_id %}
+                            <a href="{{ url_for('components_page', q=e.name) }}">{{ e.name }}</a>
+                        {% else %}
+                            {{ e.name }}
+                        {% endif %}
+                        {% if e.notes %}<small class="text-muted">({{ e.notes }})</small>{% endif %}
+                    </span>
+                    <span class="d-flex align-items-center gap-2">
+                        <small class="text-muted">{{ e.entry_kj|round(0)|int }} kJ / {{ e.entry_cal|round(0)|int }} cal / {{ e.entry_protein|round(1) }}g</small>
+                        <form method="POST" action="{{ url_for('delete_daily_entry', entry_id=e.id) }}" class="d-inline">
+                            <input type="hidden" name="log_date" value="{{ log_date }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1" title="Remove">&times;</button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Add entry form -->
+        <div class="card mt-3 mb-3">
+            <div class="card-header card-header-green">Add Entry</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_daily_entry', log_date=log_date) }}">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label class="form-label mb-0 small">Type</label>
+                            <select name="entry_type" class="form-select form-select-sm" id="entryType" onchange="toggleEntryType()">
+                                <option value="meal">Meal</option>
+                                <option value="component">Component</option>
+                            </select>
+                        </div>
+                        <div class="col" id="mealSelectCol">
+                            <label class="form-label mb-0 small">Meal</label>
+                            <input type="text" class="form-control form-control-sm select-filter mb-1" placeholder="Filter meals...">
+                            <select name="meal_id" class="form-select form-select-sm" id="mealSelect">
+                                <option value="">-- Select meal --</option>
+                                {% for m in meals %}
+                                <option value="{{ m.id }}">{{ m.name }} ({{ m.total_calories|round(0)|int }} cal)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col d-none" id="compSelectCol">
+                            <label class="form-label mb-0 small">Component</label>
+                            <input type="text" class="form-control form-control-sm select-filter mb-1" placeholder="Filter components...">
+                            <select name="component_id" class="form-select form-select-sm" id="compSelect">
+                                <option value="">-- Select component --</option>
+                                {% for c in components %}
+                                <option value="{{ c.id }}">{{ c.name }} ({{ c.calories|round(0)|int }} cal)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label mb-0 small">When</label>
+                            <select name="meal_time" class="form-select form-select-sm">
+                                <option value="breakfast">Breakfast</option>
+                                <option value="lunch">Lunch</option>
+                                <option value="dinner">Dinner</option>
+                                <option value="snack">Snack</option>
+                                <option value="coffee">Coffee</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label mb-0 small">Qty</label>
+                            <input type="number" step="0.5" min="0.5" name="quantity" value="1" class="form-control form-control-sm" style="width:70px">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success btn-sm">Add</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Totals vs Target -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header card-header-green d-flex justify-content-between align-items-center">
+                <span>Daily Totals</span>
+                {% if rank %}
+                <span class="badge rank-badge rank-{{ rank|lower }} rank-badge-lg">{{ rank }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if target %}
+                <h6 class="text-muted mb-3">Target: {{ target.label }}</h6>
+
+                <!-- Calories -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Calories</strong>
+                        <span>{{ totals.calories|round(0)|int }} / {{ target.daily_calories|round(0)|int }}</span>
+                    </div>
+                    {% set cal_pct = (totals.calories / target.daily_calories * 100) if target.daily_calories > 0 else 0 %}
+                    <div class="progress mt-1" style="height: 20px;">
+                        <div class="progress-bar {% if cal_pct > 100 %}bg-danger{% elif cal_pct > 90 %}bg-warning{% else %}bg-success{% endif %}"
+                             style="width: {{ [cal_pct, 100] | min }}%">{{ cal_pct|round(0)|int }}%</div>
+                    </div>
+                    {% if cal_pct > 100 %}
+                    <small class="text-danger">Over by {{ (totals.calories - target.daily_calories)|round(0)|int }} cal</small>
+                    {% else %}
+                    <small class="text-success">{{ (target.daily_calories - totals.calories)|round(0)|int }} cal remaining</small>
+                    {% endif %}
+                </div>
+
+                <!-- kJ -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Kilojoules</strong>
+                        <span>{{ totals.kj|round(0)|int }} / {{ target.daily_kj|round(0)|int }}</span>
+                    </div>
+                    {% set kj_pct = (totals.kj / target.daily_kj * 100) if target.daily_kj > 0 else 0 %}
+                    <div class="progress mt-1" style="height: 20px;">
+                        <div class="progress-bar {% if kj_pct > 100 %}bg-danger{% elif kj_pct > 90 %}bg-warning{% else %}bg-success{% endif %}"
+                             style="width: {{ [kj_pct, 100] | min }}%">{{ kj_pct|round(0)|int }}%</div>
+                    </div>
+                </div>
+
+                <!-- Protein -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Protein</strong>
+                        <span>{{ totals.protein|round(1) }}g / {{ target.daily_protein_g|round(0)|int }}g</span>
+                    </div>
+                    {% set prot_pct = (totals.protein / target.daily_protein_g * 100) if target.daily_protein_g > 0 else 0 %}
+                    <div class="progress mt-1" style="height: 20px;">
+                        <div class="progress-bar {% if prot_pct >= 100 %}bg-success{% elif prot_pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+                             style="width: {{ [prot_pct, 100] | min }}%">{{ prot_pct|round(0)|int }}%</div>
+                    </div>
+                    {% if prot_pct < 100 %}
+                    <small class="text-warning">Need {{ (target.daily_protein_g - totals.protein)|round(1) }}g more</small>
+                    {% else %}
+                    <small class="text-success">Target met!</small>
+                    {% endif %}
+                </div>
+
+                {% else %}
+                <p class="text-muted">No active target set. <a href="{{ url_for('settings_page') }}">Set targets</a></p>
+                <h5>{{ totals.calories|round(0)|int }} cal / {{ totals.kj|round(0)|int }} kJ / {{ totals.protein|round(1) }}g protein</h5>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="card">
+            <div class="card-header card-header-light">Summary</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td>Entries</td><td class="text-end">{{ totals.entry_count }}</td></tr>
+                    <tr><td>Total Calories</td><td class="text-end">{{ totals.calories|round(0)|int }}</td></tr>
+                    <tr><td>Total kJ</td><td class="text-end">{{ totals.kj|round(0)|int }}</td></tr>
+                    <tr><td>Total Protein</td><td class="text-end">{{ totals.protein|round(1) }}g</td></tr>
+                    {% if log.weight_morning %}
+                    <tr><td>Weight (AM)</td><td class="text-end">{{ log.weight_morning }} kg</td></tr>
+                    {% endif %}
+                    {% if log.weight_night %}
+                    <tr><td>Weight (PM)</td><td class="text-end">{{ log.weight_night }} kg</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/filter-select.js') }}"></script>
+<script>
+function toggleEntryType() {
+    const type = document.getElementById('entryType').value;
+    document.getElementById('mealSelectCol').classList.toggle('d-none', type !== 'meal');
+    document.getElementById('compSelectCol').classList.toggle('d-none', type !== 'component');
+}
+</script>
+{% endblock %}

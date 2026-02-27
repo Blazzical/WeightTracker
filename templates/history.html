@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}History - WeightTracker{% endblock %}
+
+{% block content %}
+<h4>History</h4>
+
+{% if history %}
+<table class="table table-sm table-hover">
+    <thead class="table-success">
+        <tr>
+            <th>Date</th>
+            <th class="text-end">Weight AM</th>
+            <th class="text-end d-none d-md-table-cell">Weight PM</th>
+            <th class="d-none d-md-table-cell">Exercise</th>
+            <th class="d-md-none text-center">Ex.</th>
+            <th class="text-end d-none d-md-table-cell">kJ</th>
+            <th class="text-end d-none d-md-table-cell">Cal</th>
+            <th class="text-end d-none d-md-table-cell">Protein</th>
+            {% if target %}
+            <th class="text-center">Cal %</th>
+            <th class="text-center">Prot %</th>
+            {% endif %}
+            {% if rank_tiers %}
+            <th class="text-center">Rank</th>
+            {% endif %}
+            <th class="text-end d-none d-md-table-cell">Items</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in history %}
+        {% set t = log.totals %}
+        <tr>
+            <td><a href="{{ url_for('daily_log', log_date=log.date) }}">{{ log.date }}</a></td>
+            <td class="text-end">{{ log.weight_morning or '-' }}</td>
+            <td class="text-end d-none d-md-table-cell">{{ log.weight_night or '-' }}</td>
+            <td class="d-none d-md-table-cell">{{ log.exercise or '-' }}</td>
+            <td class="d-md-none text-center">{% if log.exercise %}&#10003;{% else %}-{% endif %}</td>
+            <td class="text-end d-none d-md-table-cell">{{ t.kj|round(0)|int }}</td>
+            <td class="text-end d-none d-md-table-cell">{{ t.calories|round(0)|int }}</td>
+            <td class="text-end d-none d-md-table-cell">{{ t.protein|round(1) }}g</td>
+            {% if target %}
+            {% set cal_pct = (t.calories / target.daily_calories * 100) if target.daily_calories > 0 else 0 %}
+            {% set prot_pct = (t.protein / target.daily_protein_g * 100) if target.daily_protein_g > 0 else 0 %}
+            <td class="text-center">
+                <span class="badge {% if cal_pct > 100 %}bg-danger{% elif cal_pct > 90 %}bg-warning text-dark{% elif t.calories > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                    {{ cal_pct|round(0)|int }}%
+                </span>
+            </td>
+            <td class="text-center">
+                <span class="badge {% if prot_pct >= 100 %}bg-success{% elif prot_pct >= 70 %}bg-warning text-dark{% elif t.protein > 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ prot_pct|round(0)|int }}%
+                </span>
+            </td>
+            {% endif %}
+            {% if rank_tiers %}
+            <td class="text-center">
+                {% if log.rank %}
+                <span class="badge rank-badge rank-{{ log.rank|lower }}">{{ log.rank }}</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            {% endif %}
+            <td class="text-end d-none d-md-table-cell">{{ t.entry_count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No daily logs yet. Start by logging today's food!</p>
+{% endif %}
+{% endblock %}
