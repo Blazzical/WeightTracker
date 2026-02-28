@@ -516,11 +516,13 @@ def calc_daily_totals(log_id):
     total_kj = sum(e['entry_kj'] for e in entries)
     total_cal = sum(e['entry_cal'] for e in entries)
     total_protein = sum(e['entry_protein'] for e in entries)
+    meal_times = list({e['meal_time'] for e in entries if e['entry_cal'] > 0})
     return {
         'kj': round(total_kj, 1),
         'calories': round(total_cal, 1),
         'protein': round(total_protein, 1),
         'entry_count': len(entries),
+        'meal_times': meal_times,
     }
 
 

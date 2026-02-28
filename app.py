@@ -245,6 +245,13 @@ def daily_log(log_date):
     rank_tiers = models.get_rank_tiers()
     day_rank = models.calc_rank(totals['calories'], rank_tiers)
 
+    # History data for the trend chart
+    history_logs = models.get_all_daily_logs()
+    history = []
+    for hl in history_logs:
+        hl['totals'] = models.calc_daily_totals(hl['id'])
+        history.append(hl)
+
     return render_template('daily_log.html',
                            log=log, entries=entries, grouped=grouped,
                            totals=totals, target=target,
@@ -253,7 +260,8 @@ def daily_log(log_date):
                            log_date=log_date, dt=dt,
                            prev_date=prev_date, next_date=next_date,
                            today=date.today().isoformat(),
-                           rank=day_rank, rank_tiers=rank_tiers)
+                           rank=day_rank, rank_tiers=rank_tiers,
+                           history=history)
 
 
 @app.route('/log/<log_date>/update', methods=['POST'])

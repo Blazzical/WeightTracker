@@ -220,7 +220,7 @@
         </div>
 
         <!-- Quick stats -->
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header card-header-light">Summary</div>
             <div class="card-body">
                 <table class="table table-sm mb-0">
@@ -237,12 +237,36 @@
                 </table>
             </div>
         </div>
+
+        <!-- Trend chart (desktop: in sidebar, mobile: falls to bottom) -->
+        {% if history %}
+        <div class="card mb-3">
+            <div class="card-header card-header-green d-flex justify-content-between align-items-center">
+                <span>Trends</span>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-light active" data-chart-range="month">Last Month</button>
+                    <button type="button" class="btn btn-outline-light" data-chart-range="all">All Time</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="historyChart"></canvas>
+            </div>
+            <div class="card-footer small text-muted" id="chartStats"></div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/filter-select.js') }}"></script>
+{% if history %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/history-chart.js') }}"></script>
+<script>
+    initHistoryChart({{ history | tojson }}, {{ target.daily_calories if target else 'null' }});
+</script>
+{% endif %}
 <script>
 function toggleEntryType() {
     const type = document.getElementById('entryType').value;

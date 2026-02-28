@@ -102,3 +102,14 @@ th.sortable:hover {
     background-color: #842029;
     color: #fff;
 }
+
+/* History chart */
+#historyChart {
+    max-height: 350px;
+}
+
+@media (max-width: 767.98px) {
+    #historyChart {
+        max-height: 250px;
+    }
+}
