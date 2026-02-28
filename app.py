@@ -16,6 +16,31 @@ def ensure_db():
         app._db_initialized = True
 
 
+@app.context_processor
+def inject_theme():
+    return {
+        'dark_mode': models.get_setting('dark_mode', 'off'),
+        'primary_color': models.get_setting('primary_color', '#198754'),
+    }
+
+
+# --- Appearance settings ---
+
+@app.route('/settings/toggle-dark', methods=['POST'])
+def toggle_dark():
+    current = models.get_setting('dark_mode', 'off')
+    models.set_setting('dark_mode', 'off' if current == 'on' else 'on')
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@app.route('/settings/update-appearance', methods=['POST'])
+def update_appearance():
+    color = request.form.get('primary_color', '#198754').strip()
+    models.set_setting('primary_color', color)
+    flash('Appearance updated.', 'success')
+    return redirect(request.referrer or url_for('settings_page'))
+
+
 # --- Dashboard (Today's Log) ---
 
 @app.route('/')

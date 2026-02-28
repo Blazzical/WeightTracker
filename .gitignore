@@ -1,6 +1,32 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# App data
 data/
 *.db
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
 .claude/

@@ -112,7 +112,31 @@ def init_db():
             FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE,
             FOREIGN KEY (component_id) REFERENCES components(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
     """)
+    conn.commit()
+    conn.close()
+
+
+# --- App settings helpers ---
+
+def get_setting(key, default=None):
+    conn = get_db()
+    row = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row['value'] if row else default
+
+
+def set_setting(key, value):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?",
+        (key, value, value)
+    )
     conn.commit()
     conn.close()
 

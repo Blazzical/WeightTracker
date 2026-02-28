@@ -1,7 +1,7 @@
 /* WeightTracker custom styles */
 
 .card-header-green {
-    background-color: #198754;
+    background-color: var(--wt-primary, #198754);
     color: white;
     font-weight: 500;
 }
@@ -9,6 +9,10 @@
 .card-header-light {
     background-color: #f8f9fa;
     font-weight: 500;
+}
+
+[data-bs-theme="dark"] .card-header-light {
+    background-color: #2b3035;
 }
 
 .progress {
@@ -44,6 +48,10 @@ body {
     background-color: #f5f7f5;
 }
 
+[data-bs-theme="dark"] body {
+    background-color: #1a1d20;
+}
+
 th.sortable {
     user-select: none;
     white-space: nowrap;
@@ -74,7 +82,7 @@ th.sortable:hover {
 .rank-aaa,
 .rank-aa,
 .rank-a {
-    background-color: #198754;
+    background-color: var(--wt-primary, #198754);
     color: #fff;
 }
 
