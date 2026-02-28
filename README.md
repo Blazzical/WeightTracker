@@ -2,6 +2,8 @@
 
 A simple, self-hosted calorie and weight tracking web app that runs locally on your PC and is accessible from your phone.
 
+![WeightTracker screenshot](today.JPG)
+
 ## Quick Start (Windows)
 
 ### 1. Install Python
